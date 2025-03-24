@@ -17,7 +17,7 @@ def display_artist_image(url, artist_name):
         st.markdown(f"### {artist_name} (No Image Available)")
 
 # Afficher le logo Spotify mis à jour en haut de la page
-st.image("spotify_logo.webp", width=200)
+st.image("logo_spotify.png", width=200)
 
 # Appliquer un style personnalisé en accord avec la charte graphique de Spotify
 st.markdown(
