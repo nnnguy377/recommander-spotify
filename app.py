@@ -69,8 +69,8 @@ st.markdown(
 )
 
 # Chargement des données
-df_user_artists = pd.read_csv("user_artists_gp6.dat", sep="\t")
-df_artists = pd.read_csv("artists_gp6.dat", sep="\t")
+df_user_artists = pd.read_csv("datasets/user_artists_gp6.dat", sep="\t")
+df_artists = pd.read_csv("datasets/artists_gp6.dat", sep="\t")
 
 # Interface utilisateur
 st.title("🎵 Music Recommendation")
