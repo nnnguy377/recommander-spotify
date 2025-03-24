@@ -3,52 +3,47 @@ import pandas as pd
 import requests
 import base64
 from io import BytesIO
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-import time
-import unicodedata
 
 # --- Identifiants API Spotify ---
 CLIENT_ID = "c284ca8f68794e6f84c8c62f6f26efc0"
 CLIENT_SECRET = "1f4917a93a024c9fbab79b3982df6076"
 
-# --- Fonction pour nettoyer le nom de l'artiste ---
-def clean_artist_name(name):
-    name = unicodedata.normalize('NFKD', name).encode('ASCII', 'ignore').decode()
-    return name.strip().replace('&', 'and')
-
 # --- Fonction pour récupérer le token Spotify ---
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(show_spinner=False)
 def get_spotify_token(client_id, client_secret):
     auth_str = f"{client_id}:{client_secret}"
     b64_auth = base64.b64encode(auth_str.encode()).decode()
-    headers = {"Authorization": f"Basic {b64_auth}"}
-    data = {"grant_type": "client_credentials"}
-    response = requests.post("https://accounts.spotify.com/api/token", headers=headers, data=data)
-    return response.json().get("access_token")
 
-# --- Fonction pour récupérer les genres d'un artiste via Spotify ---
-@st.cache_data(show_spinner=False)
-def get_artist_genres_from_spotify(artist_name, token):
-    headers = {"Authorization": f"Bearer {token}"}
-    params = {"q": clean_artist_name(artist_name), "type": "artist", "limit": 1}
-    response = requests.get("https://api.spotify.com/v1/search", headers=headers, params=params)
-    if response.status_code != 200:
-        return "unknown"
-    data = response.json()
-    items = data.get("artists", {}).get("items", [])
-    if items and "genres" in items[0]:
-        return ", ".join(items[0]["genres"]) if items[0]["genres"] else "unknown"
-    return "unknown"
+    headers = {
+        "Authorization": f"Basic {b64_auth}"
+    }
+    data = {
+        "grant_type": "client_credentials"
+    }
+
+    response = requests.post("https://accounts.spotify.com/api/token", headers=headers, data=data)
+    if response.status_code == 200:
+        return response.json()["access_token"]
+    else:
+        st.error("❌ Impossible de récupérer le token Spotify.")
+        return None
 
 # --- Fonction pour récupérer l'image d'un artiste via Spotify ---
 @st.cache_data(show_spinner=False)
 def get_artist_image_from_spotify(artist_name, token):
-    headers = {"Authorization": f"Bearer {token}"}
-    params = {"q": clean_artist_name(artist_name), "type": "artist", "limit": 1}
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+    params = {
+        "q": artist_name,
+        "type": "artist",
+        "limit": 1
+    }
+
     response = requests.get("https://api.spotify.com/v1/search", headers=headers, params=params)
     if response.status_code != 200:
         return None
+
     data = response.json()
     items = data.get("artists", {}).get("items", [])
     if items and items[0].get("images"):
@@ -74,96 +69,83 @@ st.image("images/logo_spotify.png", width=200)
 
 st.markdown("""
 <style>
-    body { background-color: #121212; color: white; }
-    h1, h2, h3, h4, h5, h6 { color: #1DB954 !important; }
-    .stApp { background-color: #121212; }
+    body { background-color: #000000; color: #FFFFFF; }
+    h1, h2, h3 { color: #1DB954 !important; }
     .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 { color: #1DB954 !important; }
-    .stTable { background-color: #181818; color: white; }
-    .stButton > button { background-color: #1DB954 !important; color: black !important; border-radius: 8px; }
-    .stNumberInput > div > div > input { background-color: #282828; color: white; }
+    .stButton>button {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        border-radius: 25px;
+        border: none;
+        font-size: 16px;
+        padding: 10px;
+    }
+    .stNumberInput>div>div>input {
+        background-color: #282828;
+        color: white;
+        border-radius: 5px;
+        border: 1px solid #535353;
+    }
+    .stTable { background-color: #181818; color: white; border-radius: 10px; }
+    .stTextInput>div>div>input {
+        background-color: #282828;
+        color: white;
+        border: 1px solid #535353;
+    }
+    table { border-collapse: collapse; border: none; }
+    thead {
+        display: table-header-group;
+        font-weight: bold;
+        color: #FFFFFF;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# --- Obtenir le token Spotify ---
+# --- Chargement des données ---
+df_user_artists = pd.read_csv("datasets/user_artists_gp6.dat", sep="\t")
+df_artists = pd.read_csv("datasets/artists_gp6.dat", sep="\t")
+
+# --- Obtenir le token ---
 token = get_spotify_token(CLIENT_ID, CLIENT_SECRET)
 
-# --- Chargement des données ---
-df_artists = pd.read_csv("datasets/artists_gp6.dat", sep="\t")
-df_user_artists = pd.read_csv("datasets/user_artists_gp6.dat", sep="\t")
-
-# --- Extraction des genres si colonne manquante ou vide ---
-if "genres" not in df_artists.columns or df_artists["genres"].isnull().all():
-    st.warning("🔄 Extraction des genres Spotify en cours...")
-    genres_list = []
-    progress_bar = st.progress(0)
-    for idx, row in df_artists.iterrows():
-        genre = get_artist_genres_from_spotify(row["name"], token)
-        genres_list.append(genre)
-        if idx % 10 == 0:
-            progress_bar.progress(min(int(idx / len(df_artists) * 100), 100))
-    df_artists["genres"] = genres_list
-    df_artists.to_csv("datasets/artists_gp6.dat", sep="\t", index=False)
-    progress_bar.empty()
-
-# --- Nettoyage des genres ---
-df_artists["genres"] = df_artists["genres"].fillna("").astype(str)
-df_artists["genres"] = df_artists["genres"].apply(lambda g: g if g.strip() != "" else "unknown")
-
-# --- Sidebar ---
-st.sidebar.title("🎛️ Type de recommandation")
-reco_type = st.sidebar.radio("Choisissez le modèle :", ["Content-Based", "Popularity-Based"])
-
 # --- Interface principale ---
-st.title("🎵 Music Recommendation App")
-user_id = st.number_input("Entrez votre ID utilisateur :", min_value=1, step=1)
+st.title("🎵 Music Recommendation")
+user_id = st.number_input("Enter your user ID:", min_value=1, step=1)
 
-if st.button("Voir mes recommandations") and token:
-
+if st.button("See my recommendations") and token:
     user_data = df_user_artists[df_user_artists["userID"] == user_id]
-    user_artists = user_data.merge(df_artists, left_on="artistID", right_on="id")
 
-    if user_artists.empty:
-        st.warning("❌ Aucun artiste trouvé pour cet utilisateur.")
-        st.stop()
+    st.subheader("🎧 Your Favorite Artists")
+    user_artists = user_data.merge(df_artists, left_on="artistID", right_on="id")[["id", "name", "weight"]]
+    user_artists = user_artists.sort_values(by="weight", ascending=False).head(10)
+    user_artists.reset_index(drop=True, inplace=True)
+    user_artists.index = user_artists.index + 1
+    user_artists = user_artists.rename(columns={"name": "Artist", "weight": "Score"})
 
-    st.subheader("🎧 Vos artistes préférés")
-    st.table(user_artists[["name", "genres"]].rename(columns={"name": "Artist"}).head(10))
+    # Afficher uniquement l'image du premier artiste favori via Spotify
+    top_fav_artist = user_artists.iloc[0]
+    display_spotify_artist_image(top_fav_artist["Artist"], token)
+    st.markdown(f"### {top_fav_artist['Artist']}")
+    st.table(user_artists[["Artist", "Score"]])
 
-    # --- Content-Based ---
-    if reco_type == "Content-Based":
-        st.subheader("🎯 Recommandations basées sur les genres Spotify")
-        user_profile = " ".join(user_artists["genres"])
-        tfidf = TfidfVectorizer()
-        tfidf_matrix = tfidf.fit_transform(df_artists["genres"])
-        user_vec = tfidf.transform([user_profile])
-        similarity = cosine_similarity(user_vec, tfidf_matrix).flatten()
-        df_artists["similarity"] = similarity
-        known_ids = user_artists["id"].tolist()
-        recommendations = df_artists[~df_artists["id"].isin(known_ids)]
-        top_recos = recommendations.sort_values(by="similarity", ascending=False).head(10)
+    st.subheader("🔥 Recommendations")
+    similar_users = df_user_artists[
+        (df_user_artists["artistID"].isin(user_data["artistID"])) &
+        (df_user_artists["userID"] != user_id)
+    ]["userID"].unique()
 
-        top_artist = top_recos.iloc[0]
-        display_spotify_artist_image(top_artist["name"], token)
-        st.markdown(f"### {top_artist['name']}")
-        st.table(top_recos[["name", "genres", "similarity"]].rename(columns={"name": "Artist"}))
+    recommended_artists = df_user_artists[df_user_artists["userID"].isin(similar_users)]
+    recommended_artists = recommended_artists.groupby("artistID")["weight"].sum().reset_index()
+    recommended_artists = recommended_artists.sort_values(by="weight", ascending=False)
+    recommended_artists = recommended_artists.merge(df_artists, left_on="artistID", right_on="id")[["id", "name", "weight"]]
 
-    # --- Popularity-Based ---
-    elif reco_type == "Popularity-Based":
-        st.subheader("🔥 Recommandations par popularité")
-        pop_df = df_user_artists.groupby("artistID")["weight"].sum().reset_index()
-        pop_df = pop_df.merge(df_artists, left_on="artistID", right_on="id")
-        pop_df = pop_df[~pop_df["artistID"].isin(user_artists["artistID"])]
-        top_pop = pop_df.sort_values(by="weight", ascending=False).head(10)
+    recommended_artists = recommended_artists[~recommended_artists["name"].isin(user_artists["Artist"])].head(10)
+    recommended_artists.reset_index(drop=True, inplace=True)
+    recommended_artists.index = recommended_artists.index + 1
+    recommended_artists = recommended_artists.rename(columns={"name": "Artist", "weight": "Score"})
 
-        top_artist = top_pop.iloc[0]
-        display_spotify_artist_image(top_artist["name"], token)
-        st.markdown(f"### {top_artist['name']}")
-        st.table(top_pop[["name", "genres", "weight"]].rename(columns={"name": "Artist", "weight": "Popularity Score"}))
-
-    # --- Feedback utilisateur ---
-    st.subheader("🗳️ Avez-vous aimé ces recommandations ?")
-    feedback = st.radio("Votre avis :", ["👍 Oui", "👎 Non"])
-    if feedback == "👍 Oui":
-        st.success("Merci pour votre retour positif ! 😊")
-    else:
-        st.info("Merci pour le retour ! On essaiera d'améliorer les suggestions.")
+    # Afficher uniquement l'image du premier artiste recommandé via Spotify
+    top_recommended_artist = recommended_artists.iloc[0]
+    display_spotify_artist_image(top_recommended_artist["Artist"], token)
+    st.markdown(f"### {top_recommended_artist['Artist']}")
+    st.table(recommended_artists[["Artist", "Score"]])
