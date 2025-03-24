@@ -118,7 +118,10 @@ df_user_artists = pd.read_csv("datasets/user_artists_gp6.dat", sep="\t")
 token = get_spotify_token(CLIENT_ID, CLIENT_SECRET)
 
 # --- PRÉPARATION DES GENRES ---
-df_artists["genres"] = df_artists["genres"].fillna("").astype(str)
+if "genres" not in df_artists.columns:
+    df_artists["genres"] = ""  # On crée une colonne vide si elle n'existe pas
+else:
+    df_artists["genres"] = df_artists["genres"].fillna("").astype(str)
 
 # --- SIDEBAR ---
 st.sidebar.title("🎛️ Type de recommandation")
