@@ -6,10 +6,16 @@ from io import BytesIO
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import time
+import unicodedata
 
 # --- Identifiants API Spotify ---
 CLIENT_ID = "c284ca8f68794e6f84c8c62f6f26efc0"
 CLIENT_SECRET = "1f4917a93a024c9fbab79b3982df6076"
+
+# --- Fonction pour nettoyer le nom de l'artiste ---
+def clean_artist_name(name):
+    name = unicodedata.normalize('NFKD', name).encode('ASCII', 'ignore').decode()
+    return name.strip().replace('&', 'and')
 
 # --- Fonction pour récupérer le token Spotify ---
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -25,7 +31,7 @@ def get_spotify_token(client_id, client_secret):
 @st.cache_data(show_spinner=False)
 def get_artist_genres_from_spotify(artist_name, token):
     headers = {"Authorization": f"Bearer {token}"}
-    params = {"q": artist_name, "type": "artist", "limit": 1}
+    params = {"q": clean_artist_name(artist_name), "type": "artist", "limit": 1}
     response = requests.get("https://api.spotify.com/v1/search", headers=headers, params=params)
     if response.status_code != 200:
         return "unknown"
@@ -39,7 +45,7 @@ def get_artist_genres_from_spotify(artist_name, token):
 @st.cache_data(show_spinner=False)
 def get_artist_image_from_spotify(artist_name, token):
     headers = {"Authorization": f"Bearer {token}"}
-    params = {"q": artist_name, "type": "artist", "limit": 1}
+    params = {"q": clean_artist_name(artist_name), "type": "artist", "limit": 1}
     response = requests.get("https://api.spotify.com/v1/search", headers=headers, params=params)
     if response.status_code != 200:
         return None
