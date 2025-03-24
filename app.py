@@ -3,19 +3,6 @@ import pandas as pd
 import requests
 from io import BytesIO
 
-# Fonction pour afficher l'image à partir d'une URL
-def display_artist_image(url, artist_name):
-    if pd.notna(url) and url.startswith("http"):
-        try:
-            response = requests.get(url)
-            response.raise_for_status()  # Vérifie que l'URL est valide
-            img = BytesIO(response.content)
-            st.image(img, width=150)
-        except requests.exceptions.RequestException:
-            st.markdown(f"### {artist_name} (No Image Available)")
-    else:
-        st.markdown(f"### {artist_name} (No Image Available)")
-
 # Afficher le logo Spotify mis à jour en haut de la page
 st.image("images/logo_spotify.png", width=200)
 
@@ -86,14 +73,6 @@ if st.button("See my recommendations"):
     user_artists.index = user_artists.index + 1  # Ajoute le classement de 1 à 10
     user_artists = user_artists.rename(columns={"name": "Artist", "weight": "Score"})  # Renommer les colonnes
     
-    # Afficher l'image du premier artiste favori
-    top_fav_artist = user_artists.iloc[0]
-    display_artist_image(top_fav_artist["pictureURL"], top_fav_artist["Artist"])
-    
-    st.markdown(f"### {top_fav_artist['Artist']}")
-    
-    st.table(user_artists[["Artist", "Score"]])
-    
     st.subheader("🔥 Recommendations")
     similar_users = df_user_artists[df_user_artists["artistID"].isin(user_data["artistID"]) & (df_user_artists["userID"] != user_id)]["userID"].unique()
     
@@ -108,11 +87,3 @@ if st.button("See my recommendations"):
     recommended_artists.reset_index(drop=True, inplace=True)  # Supprime l'ancien index
     recommended_artists.index = recommended_artists.index + 1  # Ajoute le classement de 1 à 10
     recommended_artists = recommended_artists.rename(columns={"name": "Artist", "weight": "Score"})
-    
-    # Afficher l'image du premier artiste recommandé
-    top_recommended_artist = recommended_artists.iloc[0]
-    display_artist_image(top_recommended_artist["pictureURL"], top_recommended_artist["Artist"])
-    
-    st.markdown(f"### {top_recommended_artist['Artist']}")
-    
-    st.table(recommended_artists[["Artist", "Score"]])
