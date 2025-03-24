@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+import base64
+
 
 # --- Identifiants API Spotify ---
 CLIENT_ID = "c284ca8f68794e6f84c8c62f6f26efc0"
