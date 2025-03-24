@@ -1,7 +1,5 @@
 import streamlit as st
 import pandas as pd
-import requests
-from io import BytesIO
 
 # Afficher le logo Spotify mis à jour en haut de la page
 st.image("images/logo_spotify.png", width=200)
