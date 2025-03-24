@@ -4,8 +4,8 @@ from sklearn.decomposition import TruncatedSVD
 from sklearn.model_selection import train_test_split
 
 # 1️⃣ Charger les données
-user_artists_file = "user_artists_gp6.dat"
-artists_file = "artists_gp6.dat"
+user_artists_file = "datasets/user_artists_gp6.dat"
+artists_file = "datasets/artists_gp6.dat"
 
 # Charger les fichiers avec les noms échangés
 artists_df = pd.read_csv(user_artists_file, sep="\t")  # Données utilisateurs
