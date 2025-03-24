@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
-import requests
-import base64
-from io import BytesIO
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 # --- Identifiants API Spotify ---
 CLIENT_ID = "c284ca8f68794e6f84c8c62f6f26efc0"
@@ -13,7 +12,6 @@ CLIENT_SECRET = "1f4917a93a024c9fbab79b3982df6076"
 def get_spotify_token(client_id, client_secret):
     auth_str = f"{client_id}:{client_secret}"
     b64_auth = base64.b64encode(auth_str.encode()).decode()
-
     headers = {
         "Authorization": f"Basic {b64_auth}"
     }
@@ -67,83 +65,114 @@ def display_spotify_artist_image(artist_name, token):
 # --- UI STYLING + LOGO ---
 st.image("images/logo_spotify.png", width=200)
 
-st.markdown("""
-<style>
-    body { background-color: #000000; color: #FFFFFF; }
-    h1, h2, h3 { color: #1DB954 !important; }
-    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 { color: #1DB954 !important; }
-    .stButton>button {
-        background-color: #FFFFFF !important;
-        color: #000000 !important;
-        border-radius: 25px;
-        border: none;
-        font-size: 16px;
-        padding: 10px;
-    }
-    .stNumberInput>div>div>input {
-        background-color: #282828;
-        color: white;
-        border-radius: 5px;
-        border: 1px solid #535353;
-    }
-    .stTable { background-color: #181818; color: white; border-radius: 10px; }
-    .stTextInput>div>div>input {
-        background-color: #282828;
-        color: white;
-        border: 1px solid #535353;
-    }
-    table { border-collapse: collapse; border: none; }
-    thead {
-        display: table-header-group;
-        font-weight: bold;
-        color: #FFFFFF;
-    }
-</style>
-""", unsafe_allow_html=True)
+st.markdown(
+    """
+    <style>
+        /* Fond global */
+        body {
+            background-color: #121212;
+            color: white;
+        }
 
-# --- Chargement des données ---
-df_user_artists = pd.read_csv("datasets/user_artists_gp6.dat", sep="\t")
+        /* Titres personnalisés */
+        h1, h2, h3, h4, h5, h6 {
+            color: #1DB954 !important;
+        }
+
+        /* Ajustement couleurs Streamlit */
+        .stApp {
+            background-color: #121212;
+        }
+
+        .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+            color: #1DB954 !important;
+        }
+
+        .stTable {
+            background-color: #181818;
+            color: white;
+        }
+
+        .stButton > button {
+            background-color: #1DB954 !important;
+            color: black !important;
+            border-radius: 8px;
+        }
+
+        .stNumberInput > div > div > input {
+            background-color: #282828;
+            color: white;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# --- CHARGEMENT DES DONNÉES ---
 df_artists = pd.read_csv("datasets/artists_gp6.dat", sep="\t")
+df_user_artists = pd.read_csv("datasets/user_artists_gp6.dat", sep="\t")
 
 # --- Obtenir le token ---
 token = get_spotify_token(CLIENT_ID, CLIENT_SECRET)
 
-# --- Interface principale ---
-st.title("🎵 Music Recommendation")
-user_id = st.number_input("Enter your user ID:", min_value=1, step=1)
+# --- PRÉPARATION DES GENRES ---
+df_artists["genres"] = df_artists["genres"].fillna("").astype(str)
 
-if st.button("See my recommendations") and token:
+# --- SIDEBAR ---
+st.sidebar.title("🎛️ Type de recommandation")
+reco_type = st.sidebar.radio("Choisir un modèle :", ["Content-Based", "Popularity-Based"])
+
+# --- INTERFACE PRINCIPALE ---
+st.title("🎵 Music Recommendation App")
+
+user_id = st.number_input("Entrez votre ID utilisateur :", min_value=1, step=1)
+
+if st.button("Voir mes recommandations"):
+
     user_data = df_user_artists[df_user_artists["userID"] == user_id]
+    user_artists = user_data.merge(df_artists, left_on="artistID", right_on="id")
 
-    st.subheader("🎧 Your Favorite Artists")
-    user_artists = user_data.merge(df_artists, left_on="artistID", right_on="id")[["id", "name", "weight"]]
-    user_artists = user_artists.sort_values(by="weight", ascending=False).head(10)
-    user_artists.reset_index(drop=True, inplace=True)
-    user_artists.index = user_artists.index + 1
-    user_artists = user_artists.rename(columns={"name": "Artist", "weight": "Score"})
+    if user_artists.empty:
+        st.warning("❌ Aucun artiste trouvé pour cet utilisateur.")
+        st.stop()
 
-    # Afficher uniquement l'image du premier artiste favori via Spotify
-    top_fav_artist = user_artists.iloc[0]
-    display_spotify_artist_image(top_fav_artist["Artist"], token)
-    st.markdown(f"### {top_fav_artist['Artist']}")
-    st.table(user_artists[["Artist", "Score"]])
+    st.subheader("🎧 Vos artistes préférés")
+    st.table(user_artists[["name", "genres"]].rename(columns={"name": "Artist"}).head(10))
 
-    st.subheader("🔥 Recommendations")
-    similar_users = df_user_artists[
-        (df_user_artists["artistID"].isin(user_data["artistID"])) &
-        (df_user_artists["userID"] != user_id)
-    ]["userID"].unique()
+    # --- 1. RECOMMANDATION CONTENT-BASED ---
+    if reco_type == "Content-Based":
+        st.subheader("🎯 Recommandations basées sur vos goûts (genres musicaux)")
 
-    recommended_artists = df_user_artists[df_user_artists["userID"].isin(similar_users)]
-    recommended_artists = recommended_artists.groupby("artistID")["weight"].sum().reset_index()
-    recommended_artists = recommended_artists.sort_values(by="weight", ascending=False)
-    recommended_artists = recommended_artists.merge(df_artists, left_on="artistID", right_on="id")[["id", "name", "weight"]]
+        # Création du profil utilisateur basé sur les genres
+        user_profile = " ".join(user_artists["genres"])
+        tfidf = TfidfVectorizer()
+        tfidf_matrix = tfidf.fit_transform(df_artists["genres"])
+        user_vec = tfidf.transform([user_profile])
 
-    recommended_artists = recommended_artists[~recommended_artists["name"].isin(user_artists["Artist"])].head(10)
-    recommended_artists.reset_index(drop=True, inplace=True)
-    recommended_artists.index = recommended_artists.index + 1
-    recommended_artists = recommended_artists.rename(columns={"name": "Artist", "weight": "Score"})
+        # Similarité cosine
+        similarity = cosine_similarity(user_vec, tfidf_matrix).flatten()
+        df_artists["similarity"] = similarity
 
+        # Exclusion des artistes déjà connus
+        known_ids = user_artists["id"].tolist()
+        recommendations = df_artists[~df_artists["id"].isin(known_ids)]
+        top_recos = recommendations.sort_values(by="similarity", ascending=False).head(10)
+
+        st.table(top_recos[["name", "genres", "similarity"]].rename(columns={"name": "Artist"}))
+
+    # --- 2. RECOMMANDATION POPULARITY-BASED ---
+    elif reco_type == "Popularity-Based":
+        st.subheader("🔥 Recommandations basées sur la popularité globale")
+
+        artist_popularity = df_user_artists.groupby("artistID")["weight"].sum().reset_index()
+        artist_popularity = artist_popularity.merge(df_artists, left_on="artistID", right_on="id")
+        artist_popularity = artist_popularity[~artist_popularity["artistID"].isin(user_artists["artistID"])]
+        artist_popularity = artist_popularity.sort_values(by="weight", ascending=False).head(10)
+
+        st.table(artist_popularity[["name", "genres", "weight"]].rename(columns={
+            "name": "Artist",
+            "weight": "Popularity Score"
+        }))
     # Afficher uniquement l'image du premier artiste recommandé via Spotify
     top_recommended_artist = recommended_artists.iloc[0]
     display_spotify_artist_image(top_recommended_artist["Artist"], token)
