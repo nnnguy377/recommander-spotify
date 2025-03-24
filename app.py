@@ -7,46 +7,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import time
 
-# Fichier source
-file_path = "datasets/artists_gp6.dat"
-
-# Charger le fichier
-df = pd.read_csv(file_path, sep="\t")
-
-# Ajouter la colonne genres si elle n'existe pas
-if "genres" not in df.columns:
-    df["genres"] = ""
-
-# Identifiants Spotify
-CLIENT_ID = "c284ca8f68794e6f84c8c62f6f26efc0"
-CLIENT_SECRET = "1f4917a93a024c9fbab79b3982df6076"
-
-def get_artist_genres(name, token):
-    headers = {"Authorization": f"Bearer {token}"}
-    params = {"q": name, "type": "artist", "limit": 1}
-    response = requests.get("https://api.spotify.com/v1/search", headers=headers, params=params)
-    if response.status_code == 200:
-        results = response.json()
-        items = results.get("artists", {}).get("items", [])
-        if items and items[0].get("genres"):
-            return ", ".join(items[0]["genres"])
-    return ""
-
-# Récupération du token
-token = get_spotify_token(CLIENT_ID, CLIENT_SECRET)
-
-# Mise à jour des genres
-for i, row in df.iterrows():
-    if not pd.notna(row["genres"]) or row["genres"].strip() == "":
-        genres = get_artist_genres(row["name"], token)
-        df.at[i, "genres"] = genres
-        print(f"{row['name']} → {genres}")
-        time.sleep(0.1)  # limiter les appels pour éviter le rate limit
-
-# Sauvegarde dans le même fichier
-df.to_csv(file_path, sep="\t", index=False)
-print("✅ Mise à jour terminée !")
-
 # --- Identifiants API Spotify ---
 CLIENT_ID = "c284ca8f68794e6f84c8c62f6f26efc0"
 CLIENT_SECRET = "1f4917a93a024c9fbab79b3982df6076"
@@ -108,6 +68,7 @@ st.markdown("""
 df_artists = pd.read_csv("datasets/artists_gp6.dat", sep="\t")
 df_user_artists = pd.read_csv("datasets/user_artists_gp6.dat", sep="\t")
 df_artists["genres"] = df_artists["genres"].fillna("").astype(str)
+df_artists["genres"] = df_artists["genres"].apply(lambda g: g if g.strip() != "" else "unknown")  # Ajout genre par défaut
 
 # --- Obtenir le token Spotify ---
 token = get_spotify_token(CLIENT_ID, CLIENT_SECRET)
