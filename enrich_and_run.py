@@ -81,4 +81,4 @@ else:
     exit()
 
 print("\n🚀 PHASE 2 : LANCEMENT DE L'APPLICATION STREAMLIT")
-os.system("python3 -m streamlit run app.py")
+os.system("python3 -m streamlit run app_1.py")
