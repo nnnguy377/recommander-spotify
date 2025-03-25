@@ -10,7 +10,7 @@ import os
 CLIENT_ID = "5fb791827ee54776b64bb12105362a0e"
 CLIENT_SECRET = "beb2f8d225ec40e5a015dd8f343bfaad"
 INPUT_PATH = "datasets/artists_gp6.dat"
-SLEEP_TIME = 0.4
+SLEEP_TIME = 0.2
 
 # === FONCTIONS ===
 def get_spotify_token(client_id, client_secret):
