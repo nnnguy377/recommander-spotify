@@ -6,7 +6,7 @@ import time
 
 # === CONFIG PAGE ===
 st.set_page_config(page_title="Recommandations Spotify", layout="centered")
-st.image("logo_spotify.png", width=200)
+st.image("images/logo_spotify.png", width=200)
 st.title("🎧 Recommandation d'artistes Spotify")
 
 # === SIDEBAR : IDENTIFIANTS SPOTIFY ===
@@ -45,8 +45,8 @@ if not SPOTIFY_TOKEN:
 # === CHARGEMENT DES DONNÉES ===
 @st.cache_data
 def load_data():
-    artists = pd.read_csv("artists_gp6.dat", sep="\t")
-    user_artists = pd.read_csv("user_artists_gp6.dat", sep="\t")
+    artists = pd.read_csv("datasets/artists_gp6.dat", sep="\t")
+    user_artists = pd.read_csv("datasets/user_artists_gp6.dat", sep="\t")
     return artists, user_artists
 
 artists, user_artists = load_data()
