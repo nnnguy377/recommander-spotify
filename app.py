@@ -86,7 +86,7 @@ def enrich_artists(filepath, token):
 
 # === INTERFACE STREAMLIT ===
 st.set_page_config(page_title="Spotify Recommender", layout="centered")
-st.image("images/logo_spotify.png", width=200)
+st.image("logo_spotify.png", width=200)
 st.title("🎧 Recommandation d'artistes Spotify")
 
 # === CHARGEMENT DES DONNÉES ===
@@ -94,13 +94,22 @@ st.title("🎧 Recommandation d'artistes Spotify")
 def load_user_data():
     return pd.read_csv(USER_ARTISTS_PATH, sep="\t")
 
-user_artists = load_user_data()
-
 @st.cache_data
 def load_artists():
     return pd.read_csv(INPUT_PATH, sep="\t")
 
+user_artists = load_user_data()
 artists = load_artists()
+
+# === ENRICHISSEMENT AUTOMATIQUE SI GENRES ABSENTS ===
+if "genres" not in artists.columns or artists["genres"].isnull().all():
+    st.warning("Les genres sont manquants, enrichissement en cours via l'API Spotify...")
+    token = get_spotify_token(CLIENT_ID, CLIENT_SECRET)
+    if token:
+        artists = enrich_artists(INPUT_PATH, token)
+    else:
+        st.error("Impossible de récupérer le token Spotify. Vérifiez vos identifiants.")
+        st.stop()
 
 # === INTERFACE UTILISATEUR ===
 st.sidebar.header("🎚️ Options de recommandation")
@@ -133,6 +142,10 @@ def recommend_by_popularity():
 
 # === RECOMMANDATION BASÉE SUR LE CONTENU ===
 def recommend_by_content():
+    if "genres" not in artists.columns:
+        st.warning("🚫 Aucune colonne 'genres' détectée dans les données artistes.")
+        return pd.DataFrame()
+
     merged = user_data.merge(artists, left_on="artistID", right_on="id")
     merged = merged[merged["genres"].notna() & (merged["genres"] != "")]
 
