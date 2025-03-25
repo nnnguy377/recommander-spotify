@@ -86,7 +86,7 @@ def enrich_artists(filepath, token):
 
 # === INTERFACE STREAMLIT ===
 st.set_page_config(page_title="Spotify Recommender", layout="centered")
-st.image("logo_spotify.png", width=200)
+st.image("images/logo_spotify.png", width=200)
 st.title("🎧 Recommandation d'artistes Spotify")
 
 # === CHARGEMENT DES DONNÉES ===
