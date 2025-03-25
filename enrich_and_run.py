@@ -7,8 +7,8 @@ import time
 import os
 
 # === PARAMÈTRES ===
-CLIENT_ID = "c284ca8f68794e6f84c8c62f6f26efc0"
-CLIENT_SECRET = "1f4917a93a024c9fbab79b3982df6076"
+CLIENT_ID = "5fb791827ee54776b64bb12105362a0e"
+CLIENT_SECRET = "beb2f8d225ec40e5a015dd8f343bfaad"
 INPUT_PATH = "datasets/artists_gp6.dat"
 SLEEP_TIME = 0.4
 
