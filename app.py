@@ -8,8 +8,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # === PARAMÈTRES ===
-CLIENT_ID = "c284ca8f68794e6f84c8c62f6f26efc0"
-CLIENT_SECRET = "1f4917a93a024c9fbab79b3982df6076"
+CLIENT_ID = "VOTRE_CLIENT_ID"
+CLIENT_SECRET = "VOTRE_CLIENT_SECRET"
 INPUT_PATH = "datasets/artists_gp6.dat"
 USER_ARTISTS_PATH = "datasets/user_artists_gp6.dat"
 SLEEP_TIME = 0.2  # pause entre requêtes pour éviter les limites
@@ -86,19 +86,8 @@ def enrich_artists(filepath, token):
 
 # === INTERFACE STREAMLIT ===
 st.set_page_config(page_title="Spotify Recommender", layout="centered")
-st.image("images/logo_spotify.png", width=200)
+st.image("logo_spotify.png", width=200)
 st.title("🎧 Recommandation d'artistes Spotify")
-
-# === AUTHENTIFICATION ===
-st.sidebar.header("🔐 Connexion API Spotify")
-client_id = st.sidebar.text_input("Client ID", CLIENT_ID)
-client_secret = st.sidebar.text_input("Client Secret", CLIENT_SECRET, type="password")
-
-if client_id and client_secret:
-    token = get_spotify_token(client_id, client_secret)
-else:
-    st.warning("Veuillez fournir vos identifiants Spotify.")
-    st.stop()
 
 # === CHARGEMENT DES DONNÉES ===
 @st.cache_data
@@ -107,15 +96,11 @@ def load_user_data():
 
 user_artists = load_user_data()
 
-# === ENRICHISSEMENT SI NECESSAIRE ===
 @st.cache_data
-def load_or_enrich_artists(filepath, token):
-    df = pd.read_csv(filepath, sep="\t")
-    if "genres" not in df.columns or df["genres"].isnull().all():
-        df = enrich_artists(filepath, token)
-    return df
+def load_artists():
+    return pd.read_csv(INPUT_PATH, sep="\t")
 
-artists = load_or_enrich_artists(INPUT_PATH, token)
+artists = load_artists()
 
 # === INTERFACE UTILISATEUR ===
 st.sidebar.header("🎚️ Options de recommandation")
