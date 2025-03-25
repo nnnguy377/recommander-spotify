@@ -2,8 +2,8 @@ import requests
 import base64
 
 # 🔐 REMPLACE ICI
-CLIENT_ID = "5fb791827ee54776b64bb12105362a0e"
-CLIENT_SECRET = "beb2f8d225ec40e5a015dd8f343bfaad"
+CLIENT_ID = "5887ae6066b5474193c81da5736f9e0a"
+CLIENT_SECRET = "083cf1c69bb74fcb90157eaba59b7a86"
 
 def get_token(client_id, client_secret):
     print("🔐 Récupération du token...")

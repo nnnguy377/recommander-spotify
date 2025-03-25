@@ -8,11 +8,11 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # === PARAMÈTRES ===
-CLIENT_ID = "5fb791827ee54776b64bb12105362a0e"
-CLIENT_SECRET = "beb2f8d225ec40e5a015dd8f343bfaad"
+CLIENT_ID = "5887ae6066b5474193c81da5736f9e0a"
+CLIENT_SECRET = "083cf1c69bb74fcb90157eaba59b7a86"
 INPUT_PATH = "datasets/artists_gp6.dat"
 USER_ARTISTS_PATH = "datasets/user_artists_gp6.dat"
-SLEEP_TIME = 0.2  # pause entre requêtes pour éviter les limites
+SLEEP_TIME = 1.0  # pause entre requêtes pour éviter les limites
 
 # === VÉRIFICATION PRÉALABLE DU FICHIER ===
 try:
