@@ -1,29 +1,12 @@
 import pandas as pd
-import requests
-import base64
-import time
 import os
 import streamlit as st
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # === PARAMÈTRES ===
-CLIENT_ID = "e1b60679e9174eaab3bf06f31490ed75"
-CLIENT_SECRET = "775e9a6153fc4093a896664fe4bb7d17"
 INPUT_PATH = "datasets/artists_gp6.dat"
 USER_ARTISTS_PATH = "datasets/user_artists_gp6.dat"
-
-# === VÉRIFICATION PRÉALABLE DU FICHIER ===
-try:
-    artists_check = pd.read_csv(INPUT_PATH, sep="\t")
-    if "genres" not in artists_check.columns or artists_check["genres"].isnull().all():
-        print("🚨 Données incomplètes : la colonne 'genres' est absente ou vide.")
-        print("⏳ Lancement automatique de enrich_and_run.py pour enrichir les données...")
-        os.system("python3 enrich_and_run.py")
-        exit()
-except Exception as e:
-    print(f"❌ Erreur de chargement du fichier {INPUT_PATH} :", e)
-    exit()
 
 # === INTERFACE STREAMLIT ===
 st.set_page_config(page_title="Spotify Recommender", layout="centered")
