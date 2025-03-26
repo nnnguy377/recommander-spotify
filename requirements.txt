@@ -1,4 +1,5 @@
 pandas
 requests
+tqdm
 streamlit
 scikit-learn

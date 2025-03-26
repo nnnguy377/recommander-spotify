@@ -3,6 +3,7 @@ import os
 import streamlit as st
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+import subprocess
 
 # === PARAMÈTRES ===
 INPUT_PATH = "datasets/artists_gp6.dat"
@@ -12,6 +13,15 @@ USER_ARTISTS_PATH = "datasets/user_artists_gp6.dat"
 st.set_page_config(page_title="Spotify Recommender", layout="centered")
 st.image("images/logo_spotify.png", width=200)
 st.title("🎧 Recommandation d'artistes Spotify")
+
+# === BOUTON DE RAFRAÎCHISSEMENT ===
+if st.button("🔄 Rafraîchir les données Spotify (noms + genres)"):
+    with st.spinner("Extraction des noms Spotify..."):
+        subprocess.run(["python3", "name_extraction.py"])
+    with st.spinner("Enrichissement des genres..."):
+        subprocess.run(["python3", "enrich_genres.py"])
+    st.success("✅ Données mises à jour avec succès. Veuillez recharger la page.")
+    st.stop()
 
 # === CHARGEMENT DES DONNÉES ===
 @st.cache_data
