@@ -13,7 +13,7 @@ INPUT_PATH = "datasets/artists_gp6.dat"
 CACHE_PATH = "artist_name_to_id.csv"
 BATCH_SIZE = 50
 MAX_WORKERS = 4
-
+MAX_RETRIES = 3
 SPOTIFY_TOKEN = None
 
 # === AUTHENTIFICATION ===
@@ -70,26 +70,32 @@ def get_artist_id(name, cache):
     cache[name] = "NOT_FOUND"
     return None
 
-# === REQUÊTE BATCH ===
+# === REQUÊTE BATCH AVEC RETRIES ===
 def get_genres_batch(artist_ids):
     global SPOTIFY_TOKEN
     url = "https://api.spotify.com/v1/artists"
     headers = {"Authorization": f"Bearer {SPOTIFY_TOKEN}"}
     params = {"ids": ",".join(artist_ids)}
-    r = requests.get(url, headers=headers, params=params)
-    if r.status_code == 401:
-        get_token()
-        return get_genres_batch(artist_ids)
-    if r.status_code == 429:
-        retry = int(r.headers.get("Retry-After", 1))
-        print(f"⏳ Too many requests. Waiting {retry}s...")
-        time.sleep(retry)
-        return get_genres_batch(artist_ids)
-    if r.status_code != 200:
-        print("❌ Erreur batch:", r.text)
-        return {}
-    data = r.json().get("artists", [])
-    return {a["id"]: a.get("genres", []) for a in data}
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        r = requests.get(url, headers=headers, params=params)
+        if r.status_code == 200:
+            data = r.json().get("artists", [])
+            return {a["id"]: a.get("genres", []) for a in data}
+        elif r.status_code == 401:
+            get_token()
+        elif r.status_code == 429:
+            retry = int(r.headers.get("Retry-After", 1))
+            print(f"⏳ Too many requests. Waiting {retry}s...")
+            time.sleep(retry)
+        elif r.status_code == 500:
+            print(f"⚠️ Erreur 500 (tentative {attempt}/{MAX_RETRIES}). Attente 2s...")
+            time.sleep(2)
+        else:
+            print("❌ Erreur batch:", r.text)
+            break
+
+    return {}
 
 # === TRAITEMENT PAR BATCH ===
 def process_batch(names, cache):
