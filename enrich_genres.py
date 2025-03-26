@@ -4,8 +4,6 @@ import time
 import pandas as pd
 import os
 import math
-import re
-import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # === PARAMÈTRES ===
@@ -36,13 +34,6 @@ def get_token():
         print("❌ Erreur récupération token:", r.text)
         SPOTIFY_TOKEN = None
 
-# === NETTOYAGE NOM ARTISTE ===
-def normalize_name(name):
-    name = name.strip()
-    name = unicodedata.normalize("NFD", name).encode("ascii", "ignore").decode("utf-8")
-    name = re.sub(r"[^a-zA-Z0-9\s]", "", name)
-    return name
-
 # === CHARGER CACHE NOM -> ID ===
 def load_cache():
     if os.path.exists(CACHE_PATH):
@@ -52,7 +43,7 @@ def load_cache():
 def save_cache(cache):
     pd.DataFrame([{"name": k, "id": v} for k, v in cache.items()]).to_csv(CACHE_PATH, index=False)
 
-# === RECHERCHE ID ROBUSTE + CACHE ===
+# === RECHERCHE ID + CACHE ===
 def get_artist_id(name, cache):
     if name in cache:
         return cache[name]
@@ -61,25 +52,20 @@ def get_artist_id(name, cache):
     url = "https://api.spotify.com/v1/search"
     headers = {"Authorization": f"Bearer {SPOTIFY_TOKEN}"}
 
-    queries = [
-        f"artist:\"{name}\"",
-        name,
-        normalize_name(name)
-    ]
+    params = {"q": name, "type": "artist", "limit": 3}
+    r = requests.get(url, headers=headers, params=params)
+    if r.status_code == 401:
+        get_token()
+        return get_artist_id(name, cache)
+    if r.status_code != 200:
+        cache[name] = "NOT_FOUND"
+        return None
 
-    for q in queries:
-        params = {"q": q, "type": "artist", "limit": 3}
-        r = requests.get(url, headers=headers, params=params)
-        if r.status_code == 401:
-            get_token()
-            return get_artist_id(name, cache)
-        if r.status_code != 200:
-            continue
-        items = r.json().get("artists", {}).get("items", [])
-        if items:
-            best = max(items, key=lambda x: x.get("followers", {}).get("total", 0))
-            cache[name] = best["id"]
-            return best["id"]
+    items = r.json().get("artists", {}).get("items", [])
+    if items:
+        best = max(items, key=lambda x: x.get("followers", {}).get("total", 0))
+        cache[name] = best["id"]
+        return best["id"]
 
     cache[name] = "NOT_FOUND"
     return None
